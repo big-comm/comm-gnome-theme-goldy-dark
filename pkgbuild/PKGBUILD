@@ -37,7 +37,7 @@ package() {
     # Instala o tema GTK
     install -d "${pkgdir}/usr/share/themes"
     
-    local theme_source_dir="${srcdir}/Goldy-Plasma-Themes/Goldy GTK Themes/${_theme_target}"
+    local theme_source_dir="${srcdir}/Goldy GTK Themes/${_theme_target}"
     
     if [ ! -d "${theme_source_dir}" ]; then
         echo "Erro: Diretório do tema '${_theme_target}' não encontrado!"
