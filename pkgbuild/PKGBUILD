@@ -12,25 +12,20 @@ makedepends=('git')
 optdepends=('gnome-tweaks: Para customizações adicionais'
             'libheif: Para visualização do wallpaper no formato HEIC')
 
-# [ALTERADO] A fonte agora é apenas o repositório do pacote
 source=(
     "git+${url}.git"
 )
 sha256sums=('SKIP')
 
-# Define a variante do tema a ser usada
 _theme_target='Goldy-Dark'
 
-# Detecta e usa o arquivo de instalação correto
 if [ -e "${pkgname}.install" ]; then
     install=${pkgname}.install
 elif [ -e "pkgbuild.install" ]; then
     install=pkgbuild.install
 fi
 
-# [NOVO] A função prepare extrai o tema do arquivo .tar.xz local
 prepare() {
-    # Extrai o tema para o diretório src
     tar -xf "${srcdir}/${pkgname}/usr/share/Goldy GTK Themes.tar.xz" -C "${srcdir}"
 }
 
@@ -42,18 +37,17 @@ package() {
     # Instala o tema GTK
     install -d "${pkgdir}/usr/share/themes"
     
-    # [ALTERADO] O caminho agora aponta para o diretório extraído do tar.xz
-    local theme_source_dir="${srcdir}/Goldy GTK Themes/${_theme_target}"
+    # [CORREÇÃO] O diretório de origem é 'Goldy GTK Themes', que é o próprio tema.
+    local theme_source_dir="${srcdir}/Goldy GTK Themes"
     
     if [ ! -d "${theme_source_dir}" ]; then
-        echo "Erro: Diretório do tema '${_theme_target}' não encontrado após extração!"
-        # Adiciona uma verificação para ajudar a depurar
-        echo "Conteúdo de '${srcdir}':"
-        ls -l "${srcdir}"
+        echo "Erro: Diretório do tema '${theme_source_dir}' não foi encontrado em '${srcdir}'!"
         return 1
     fi
     
-    cp -r "${theme_source_dir}" "${pkgdir}/usr/share/themes/"
+    # Copia o diretório de origem e o RENOMEIA para o nome do tema alvo no destino.
+    echo "Instalando '${theme_source_dir}' como '${_theme_target}'..."
+    cp -r "${theme_source_dir}" "${pkgdir}/usr/share/themes/${_theme_target}"
 
     # Instala o wallpaper
     install -Dm644 "${srcdir}/${pkgname}/usr/share/goldy.heic" \
@@ -63,8 +57,6 @@ package() {
     install -Dm644 "${srcdir}/${pkgname}/README.md" \
         "${pkgdir}/usr/share/doc/${pkgname}/README.md"
     
-    # [IMPORTANTE] Instala a licença original do tema
-    # Você deve copiar o arquivo LICENSE do repositório de L4ki para a raiz do seu projeto
     install -Dm644 "${srcdir}/${pkgname}/LICENSE" \
         "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
