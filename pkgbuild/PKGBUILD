@@ -12,11 +12,11 @@ makedepends=('git')
 optdepends=('gnome-tweaks: Para customizações adicionais'
             'libheif: Para visualização do wallpaper no formato HEIC')
 
+# [ALTERADO] A fonte agora é apenas o repositório do pacote
 source=(
-    "git+https://github.com/L4ki/Goldy-Plasma-Themes.git"
     "git+${url}.git"
 )
-sha256sums=('SKIP' 'SKIP')
+sha256sums=('SKIP')
 
 # Define a variante do tema a ser usada
 _theme_target='Goldy-Dark'
@@ -28,7 +28,12 @@ elif [ -e "pkgbuild.install" ]; then
     install=pkgbuild.install
 fi
 
-# O tema Goldy não requer compilação, então a função build é vazia
+# [NOVO] A função prepare extrai o tema do arquivo .tar.xz local
+prepare() {
+    # Extrai o tema para o diretório src
+    tar -xf "${srcdir}/${pkgname}/usr/share/Goldy GTK Themes.tar.xz" -C "${srcdir}"
+}
+
 build() {
     echo "O tema '${_theme_target}' não requer passos de compilação."
 }
@@ -37,10 +42,14 @@ package() {
     # Instala o tema GTK
     install -d "${pkgdir}/usr/share/themes"
     
-    local theme_source_dir="${srcdir}/Goldy-Plasma-Themes/GTK Themes/${_theme_target}"
+    # [ALTERADO] O caminho agora aponta para o diretório extraído do tar.xz
+    local theme_source_dir="${srcdir}/Goldy GTK Themes/${_theme_target}"
     
     if [ ! -d "${theme_source_dir}" ]; then
-        echo "Erro: Diretório do tema '${_theme_target}' não encontrado!"
+        echo "Erro: Diretório do tema '${_theme_target}' não encontrado após extração!"
+        # Adiciona uma verificação para ajudar a depurar
+        echo "Conteúdo de '${srcdir}':"
+        ls -l "${srcdir}"
         return 1
     fi
     
@@ -53,6 +62,9 @@ package() {
     # Instala documentação e licença
     install -Dm644 "${srcdir}/${pkgname}/README.md" \
         "${pkgdir}/usr/share/doc/${pkgname}/README.md"
-    install -Dm644 "${srcdir}/Goldy-Plasma-Themes/LICENSE" \
+    
+    # [IMPORTANTE] Instala a licença original do tema
+    # Você deve copiar o arquivo LICENSE do repositório de L4ki para a raiz do seu projeto
+    install -Dm644 "${srcdir}/${pkgname}/LICENSE" \
         "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
