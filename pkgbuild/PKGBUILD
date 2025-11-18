@@ -19,11 +19,8 @@ sha256sums=('SKIP')
 
 _theme_target='Goldy-Dark'
 
-if [ -e "${pkgname}.install" ]; then
-    install=${pkgname}.install
-elif [ -e "pkgbuild.install" ]; then
-    install=pkgbuild.install
-fi
+# [IMPORTANTE] Garante que o pacman use o script de instalação
+install=pkgbuild/pkgbuild.install
 
 prepare() {
     tar -xf "${srcdir}/${pkgname}/usr/share/Goldy GTK Themes.tar.xz" -C "${srcdir}"
@@ -35,28 +32,21 @@ build() {
 
 package() {
     # Instala o tema GTK
-    install -d "${pkgdir}/usr/share/themes"
-    
-    # [CORREÇÃO] O diretório de origem é 'Goldy GTK Themes', que é o próprio tema.
     local theme_source_dir="${srcdir}/Goldy GTK Themes"
-    
-    if [ ! -d "${theme_source_dir}" ]; then
-        echo "Erro: Diretório do tema '${theme_source_dir}' não foi encontrado em '${srcdir}'!"
-        return 1
-    fi
-    
-    # Copia o diretório de origem e o RENOMEIA para o nome do tema alvo no destino.
-    echo "Instalando '${theme_source_dir}' como '${_theme_target}'..."
+    install -d "${pkgdir}/usr/share/themes"
     cp -r "${theme_source_dir}" "${pkgdir}/usr/share/themes/${_theme_target}"
 
     # Instala o wallpaper
     install -Dm644 "${srcdir}/${pkgname}/usr/share/goldy.heic" \
         "${pkgdir}/usr/share/backgrounds/${pkgname}/goldy.heic"
 
+    # [NOVO] Instala o script helper de automação
+    install -Dm755 "${srcdir}/${pkgname}/pkgbuild/install.sh" \
+        "${pkgdir}/usr/share/${pkgname}/install.sh"
+
     # Instala documentação e licença
     install -Dm644 "${srcdir}/${pkgname}/README.md" \
         "${pkgdir}/usr/share/doc/${pkgname}/README.md"
-    
     install -Dm644 "${srcdir}/${pkgname}/LICENSE" \
         "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }
