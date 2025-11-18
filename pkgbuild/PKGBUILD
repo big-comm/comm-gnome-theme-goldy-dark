@@ -1,72 +1,58 @@
-# Maintainer: Tales A. Mendonça <talesam@gmail.com>
+# Maintainer: Narayan Silva <narayan.song@gmail.com>
 
-pkgname=pkgbuild-template
-pkgdesc="Package template for Communitybig"
-# Uncomment and edit the following lines as needed
-#depends=('')
-#makedepends=('')
-#optdepends=('')
-#conflicts=('')
-#provides=('')
-#replaces=('')
+pkgname=comm-gnome-theme-goldy-dark
+pkgdesc="Goldy Dark GNOME theme com estilos GTK e wallpaper"
 pkgver=$(date +%y.%m.%d)
 pkgrel=$(date +%H%M)
 arch=('any')
-license=('MIT')
+license=('GPL3')
 url="https://github.com/big-comm/${pkgname}"
-source=("git+${url}.git")
-md5sums=('SKIP')
+depends=('gtk3' 'gtk4' 'gnome-shell' 'gtk-engine-murrine')
+makedepends=('git')
+optdepends=('gnome-tweaks: Para customizações adicionais'
+            'libheif: Para visualização do wallpaper no formato HEIC')
 
-# Automatically detect and use the correct install file
+source=(
+    "git+https://github.com/L4ki/Goldy-Plasma-Themes.git"
+    "git+${url}.git"
+)
+sha256sums=('SKIP' 'SKIP')
+
+# Define a variante do tema a ser usada
+_theme_target='Goldy-Dark'
+
+# Detecta e usa o arquivo de instalação correto
 if [ -e "${pkgname}.install" ]; then
     install=${pkgname}.install
 elif [ -e "pkgbuild.install" ]; then
     install=pkgbuild.install
 fi
 
-prepare() {
-    cd "${srcdir}/${pkgname}"
-    # Add any preparation steps here, if needed
-    # For example: patch -p1 < "${srcdir}/patch-file.patch"
-}
-
+# O tema Goldy não requer compilação, então a função build é vazia
 build() {
-    cd "${srcdir}/${pkgname}"
-    # Add build steps here, if needed
-    # For example: make
-}
-
-check() {
-    cd "${srcdir}/${pkgname}"
-    # Add check/test steps here, if needed
-    # For example: make check
+    echo "O tema '${_theme_target}' não requer passos de compilação."
 }
 
 package() {
-    cd "${srcdir}/${pkgname}"
-
-    # Determine the correct source directory
-    if [ -d "${pkgname}" ]; then
-        srcdir="${srcdir}/${pkgname}/${pkgname}"
-    else
-        srcdir="${srcdir}/${pkgname}"
+    # Instala o tema GTK
+    install -d "${pkgdir}/usr/share/themes"
+    
+    local theme_source_dir="${srcdir}/Goldy-Plasma-Themes/Goldy GTK Themes/${_theme_target}"
+    
+    if [ ! -d "${theme_source_dir}" ]; then
+        echo "Erro: Diretório do tema '${_theme_target}' não encontrado!"
+        return 1
     fi
+    
+    cp -r "${theme_source_dir}" "${pkgdir}/usr/share/themes/"
 
-    # Install files
-    local dirs=("usr" "etc" "opt")
-    for dir in "${dirs[@]}"; do
-        if [ -d "${srcdir}/${dir}" ]; then
-            cp -a "${srcdir}/${dir}" "${pkgdir}/"
-        fi
-    done
+    # Instala o wallpaper
+    install -Dm644 "${srcdir}/${pkgname}/usr/share/goldy.heic" \
+        "${pkgdir}/usr/share/backgrounds/${pkgname}/goldy.heic"
 
-    # Install license file if present
-    if [ -f "LICENSE" ]; then
-        install -Dm644 LICENSE "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
-    fi
-
-    # Install documentation if present
-    if [ -f "README.md" ]; then
-        install -Dm644 README.md "${pkgdir}/usr/share/doc/${pkgname}/README.md"
-    fi
+    # Instala documentação e licença
+    install -Dm644 "${srcdir}/${pkgname}/README.md" \
+        "${pkgdir}/usr/share/doc/${pkgname}/README.md"
+    install -Dm644 "${srcdir}/Goldy-Plasma-Themes/LICENSE" \
+        "${pkgdir}/usr/share/licenses/${pkgname}/LICENSE"
 }

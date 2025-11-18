@@ -1,82 +1,139 @@
 #!/usr/bin/env bash
-# This file contains scripts that are executed at different stages of package installation/upgrade/removal
+# pkgbuild.install - Script de instalação para comm-gnome-theme-goldy-dark
 
-# Color definitions for status messages
-blueDark="\e[1;38;5;33m"     # Bold dark blue
-mediumBlue="\e[1;38;5;32m"   # Bold medium blue
-lightBlue="\e[1;38;5;39m"    # Bold light blue
-cyan="\e[1;38;5;45m"         # Bold cyan
-white="\e[1;97m"             # Bold white
-reset="\e[0m"                # Reset text formatting
+# Definições de cores para mensagens de status
+blueDark="\e[1;38;5;33m"
+lightBlue="\e[1;38;5;39m"
+cyan="\e[1;38;5;45m"
+white="\e[1;97m"
+reset="\e[0m"
 
-# Print status messages - CHANGE 'PACKAGE_NAME' to your actual package name
+# Imprime mensagens de status
 printMsg() {
     local message=$1
-    echo -e "${blueDark}[${lightBlue}PACKAGE_NAME${blueDark}]${reset} ${cyan}→${reset} ${white}${message}${reset}"
+    echo -e "${blueDark}[${lightBlue}comm-gnome-theme-goldy-dark${blueDark}]${reset} ${cyan}→${reset} ${white}${message}${reset}"
 }
 
-# Function executed before package installation
-# pre_install() {
-#     printMsg "Preparing to install the package..."
-#     # Example: Check for system dependencies
-#     # if ! command -v required_command &> /dev/null; then
-#     #     printMsg "Error: required_command not found. Please install it before continuing."
-#     #     exit 1
-#     # fi
-# }
+# Função executada após a instalação do pacote
+post_install() {
+    printMsg "Aplicando o tema Goldy-Dark para GNOME e configurando o GTK..."
 
-# Function executed after package installation
-# post_install() {
-#     printMsg "Configuring the package after installation..."
-#     # Example: Create a configuration directory
-#     # mkdir -p /etc/mypackage
-#     # chmod 755 /etc/mypackage
-#     # printMsg "Created configuration directory"
-#
-#     # Example: Start a service
-#     # systemctl enable myservice.service
-#     # systemctl start myservice.service
-#     # printMsg "Service enabled and started"
-# }
+    # Detecção robusta de usuário
+    local user
+    user=$(logname 2>/dev/null)
+    [ -z "$user" ] && user=$(id -un 2>/dev/null)
+    
+    if [ -z "$user" ] || [ "$user" = "root" ]; then
+        printMsg "Não foi possível determinar o usuário atual. Pulando aplicação do tema."
+        return
+    fi
 
-# Function executed before package upgrade
-# pre_upgrade() {
-#     printMsg "Preparing to upgrade the package..."
-#     # Example: Backup configuration files
-#     # cp /etc/mypackage/config.conf /etc/mypackage/config.conf.bak
-#     # printMsg "Configuration backup created"
-# }
+    local user_home
+    user_home=$(getent passwd "$user" | cut -d: -f6)
+    
+    if [ -z "$user_home" ]; then
+        printMsg "Não foi possível determinar o diretório home para o usuário $user. Pulando."
+        return
+    fi
 
-# Function executed after package upgrade
-# post_upgrade() {
-#     printMsg "Finalizing package upgrade..."
-#     # Usually, post_install is called here to ensure
-#     # all post-installation configurations are applied
-#     # post_install
-#
-#     # Example: Check and update configuration files
-#     # if [ -f /etc/mypackage/config.conf.pacnew ]; then
-#     #     printMsg "New configuration file available. Please review /etc/mypackage/config.conf.pacnew"
-#     # fi
-#     # printMsg "Upgrade completed successfully"
-# }
+    # Define os caminhos do tema
+    local THEME_TARGET="Goldy-Dark"
+    local GTK4_DIR="$user_home/.config/gtk-4.0"
+    local GTK3_DIR="$user_home/.config/gtk-3.0"
 
-# Function executed before package removal
-# pre_remove() {
-#     printMsg "Preparing to remove the package..."
-#     # Example: Stop services
-#     # systemctl stop myservice.service
-#     # systemctl disable myservice.service
-#     # printMsg "Services stopped"
-# }
+    printMsg "Usando tema: $THEME_TARGET"
+    printMsg "Usuário: $user (home: $user_home)"
 
-# Function executed after package removal
-# post_remove() {
-#     printMsg "Cleaning up after package removal..."
-#     # Example: Remove data directories created by the package
-#     # rm -rf /var/lib/mypackage
-#     # printMsg "Package directories removed"
-#
-#     # printMsg "If you want to remove all user data, run:"
-#     # printMsg "rm -rf /home/*/mypackage_data"
-# }
+    # Backup e criação dos diretórios GTK
+    for dir in "$GTK4_DIR" "$GTK3_DIR"; do
+        if [ -d "$dir" ]; then
+            mkdir -p "$user_home/backup_customizations"
+            printMsg "Fazendo backup de $(basename "$dir")..."
+            tar -czf "$user_home/backup_customizations/$(basename "$dir")-$(date +%Y%m%d%H%M%S).tar.gz" \
+                -C "$(dirname "$dir")" "$(basename "$dir")" 2>/dev/null || true
+        else
+            mkdir -p "$dir"
+        fi
+        chown -R "$user:$user" "$dir"
+    done
+
+    # Aplica as configurações do GNOME usando o contexto correto do usuário
+    printMsg "Aplicando configurações do GNOME para o usuário $user..."
+    local uid
+    uid=$(id -u "$user")
+    local runtime_dir="/run/user/$uid"
+
+    su - "$user" -c "
+        export DISPLAY=:0
+        export DBUS_SESSION_BUS_ADDRESS=unix:path=$runtime_dir/bus
+        
+        # Define o tema GTK via gsettings
+        gsettings set org.gnome.desktop.interface gtk-theme '$THEME_TARGET'
+        
+        # Define o esquema de cores para escuro
+        gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'
+    " || {
+        printMsg "Aviso: Falha ao aplicar gsettings. Tente manualmente com:"
+        printMsg "  gsettings set org.gnome.desktop.interface gtk-theme '$THEME_TARGET'"
+        printMsg "  gsettings set org.gnome.desktop.interface color-scheme 'prefer-dark'"
+    }
+
+    printMsg "Tema Goldy-Dark aplicado com sucesso!"
+    printMsg "Pode ser necessário reiniciar o GNOME Shell ou o sistema para o efeito completo."
+}
+
+# Função executada após a remoção do pacote
+post_remove() {
+    printMsg "Removendo o tema Goldy-Dark e restaurando backups se disponíveis..."
+
+    local user
+    user=$(logname 2>/dev/null)
+    [ -z "$user" ] && user=$(id -un 2>/dev/null)
+
+    if [ -z "$user" ] || [ "$user" = "root" ]; then
+        printMsg "Não foi possível determinar o usuário atual. Pulando."
+        return
+    fi
+
+    local user_home
+    user_home=$(getent passwd "$user" | cut -d: -f6)
+    [ -z "$user_home" ] && return
+
+    local backup_dir="$user_home/backup_customizations"
+
+    # Restaura backups se disponíveis
+    if [ -d "$backup_dir" ]; then
+        printMsg "Restaurando configurações GTK a partir de backups..."
+        local latest_gtk3_backup=\$(ls -t \"$backup_dir/gtk-3.0-\"*.tar.gz 2>/dev/null | head -n1)
+        local latest_gtk4_backup=\$(ls -t \"$backup_dir/gtk-4.0-\"*.tar.gz 2>/dev/null | head -n1)
+
+        if [ -f \"\$latest_gtk3_backup\" ]; then
+            tar -xzf \"\$latest_gtk3_backup\" -C \"$user_home/.config/\" 2>/dev/null || true
+        fi
+        if [ -f \"\$latest_gtk4_backup\" ]; then
+            tar -xzf \"\$latest_gtk4_backup\" -C \"$user_home/.config/\" 2>/dev/null || true
+        fi
+    fi
+
+    # Restaura as configurações padrão do GNOME
+    printMsg "Restaurando configurações padrão do GNOME..."
+    local uid
+    uid=$(id -u "$user")
+    local runtime_dir="/run/user/$uid"
+
+    su - "$user" -c "
+        export DBUS_SESSION_BUS_ADDRESS=unix:path=$runtime_dir/bus
+        
+        # Reseta para o tema padrão do GNOME
+        gsettings reset org.gnome.desktop.interface gtk-theme
+        gsettings reset org.gnome.desktop.interface color-scheme
+    " 2>/dev/null || true
+
+    printMsg "Tema Goldy-Dark removido com sucesso."
+}
+
+# Função executada após a atualização do pacote
+post_upgrade() {
+    printMsg "Reaplicando configuração após a atualização..."
+    post_install
+}
