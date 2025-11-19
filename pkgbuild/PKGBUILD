@@ -37,8 +37,8 @@ package() {
     cp -r "${theme_source_dir}" "${pkgdir}/usr/share/themes/${_theme_target}"
 
     # Instala o wallpaper
-    install -Dm644 "${srcdir}/${pkgname}/usr/share/goldy.heic" \
-        "${pkgdir}/usr/share/backgrounds/${pkgname}/goldy.heic"
+    install -Dm644 "${srcdir}/${pkgname}/usr/share/goldy-wallpaper.heic" \
+        "${pkgdir}/usr/share/backgrounds/${pkgname}/goldy-wallpaper.heic"
 
     # [NOVO] Instala o script helper de automação
     install -Dm755 "${srcdir}/${pkgname}/pkgbuild/install.sh" \
